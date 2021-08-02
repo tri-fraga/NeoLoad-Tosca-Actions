@@ -49,16 +49,17 @@ public final class TCShellAction implements Action{
 	public String getDescription() {
 		final StringBuilder description = new StringBuilder();
 		description.append(
-				"Launches a Tosca test on the Load Generator machine. Tosca and its workspace must be available on Load Generator. Resources copied under the 'custom-resources' folder of the project are automatically copied to all Load Generators.\n")
+				"Launches a Tosca test on the Load Generator machine. Tosca and its workspace must be available on Load Generator. The given executable node will be continuously executed until the load test is stopped. Resources copied under the 'custom-resources' folder of the project are automatically copied to all Load Generators.\n")
 				.append("Use the variable '${NL-CustomResources}' to access the synchronized folder on the Load Generator.\n\n")
 				.append("Possible parameters are:\n")
-				.append("- ").append(TCShellActionEngine.WORKSPACE_PARAMETER).append(" (Required): Path to the Tosca Commander Workspace (.tws) on your Load Generator.\n")
+				.append("- ").append(TCShellActionEngine.WORKSPACE_PARAMETER).append(" (Required): Path to the Tosca Commander Workspace (.tws) on your Load Generator machine.\n")
 				.append("- ").append(TCShellActionEngine.WORKSPACEUSR_PARAMETER).append(" (Optional): User to open the workspace with.\n")
 				.append("- ").append(TCShellActionEngine.WORKSPACEPWD_PARAMETER).append(" (Optional): Password to open the workspace with.\n")
+				.append("- ").append(TCShellActionEngine.EXECUTION_MODE).append(" (Optional): True (Default) if workspace should be opened in execution only mode and results should not be saved. Set to false if execution results should be saved.\n")
 				.append("- ").append(TCShellActionEngine.EXECUTABLENODE_PARAMETER).append(" (Optional): The Node in Tosca that should be executed. Can be an ExecutionList or an ExecutionListEntry. Not used if script is set.\n")
 				.append("- ").append(TCShellActionEngine.DATAEXCHANGEAPIURL_PARAMETER).append(" (Optional): DataExchange API address. Default is: http://${NL-ControllerIp}:7400/DataExchange/v1/Service.svc/. Not used if script is set.\n")
 				.append("- ").append(TCShellActionEngine.DATAEXCHANGEAPIKEY_PARAMETER).append(" (Optional): DataExchange API access key. Not used if script is set.\n")
-				.append("- ").append(TCShellActionEngine.TCSHELLSCRIPT_PARAMETER).append(" (Optional): Path to the TCShell script file that should be used, could contain advanced steps like checkout and saving of results.\n")
+				.append("- ").append(TCShellActionEngine.TCSHELLSCRIPT_PARAMETER).append(" (Optional): Path to the TCShell script file that should be used. If a TCShell script is provided the script mode is used instead of the interactive mode.\n")
 				.append("- ").append(TCShellActionEngine.ARG_PARAMETER).append(" (Optional): Additional TCShell start argument number X. If the argument uses values create a separate argument for the name and each value.");
 		return description.toString();
 	}
