@@ -11,10 +11,14 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
+import java.util.regex.Pattern;
+
+import org.apache.commons.lang3.StringUtils;
 
 import com.neotys.extensions.action.ActionParameter;
 import com.neotys.extensions.action.engine.ActionEngine;
 import com.neotys.extensions.action.engine.Context;
+import com.neotys.extensions.action.engine.RuntimeMode;
 import com.neotys.extensions.action.engine.SampleResult;
 
 public final class TCShellActionEngine implements ActionEngine {
@@ -27,106 +31,97 @@ public final class TCShellActionEngine implements ActionEngine {
 	public static final String EXECUTABLENODE_PARAMETER = "executableNode";
 	public static final String DATAEXCHANGEAPIURL_PARAMETER = "dataExchangeAPIURL";
 	public static final String DATAEXCHANGEAPIKEY_PARAMETER = "dataExchangeAPIKey";
-	public static final String TCSHELLSCRIPT_PARAMETER = "script";
-	public static final String ARG_PARAMETER = "arg";
 	public static final String TCSHELL_SCANNER_DELIMITER = ">|\\?";  // ' > ' or ' ? '
 	
 	private static final String STATUS_CODE_PARAMETER_ERROR = "NL-TCSHELL-TEST-ACTION-01";
 	private static final String STATUS_CODE_PROCESS_ERROR = "NL-TCSHELL-TEST-ACTION-02";
 	private static final String STATUS_CODE_TCSHELL_ERROR = "NL-TCSHELL-TEST-ACTION-03";
+	private static final String STATUS_CODE_OK = "NL-TCSHELL-OK";
 	
-	protected String tcShellScript;
-	protected String workspace;
-	protected String workspaceUsr;
-	protected String workspacePwd;
-	protected String executableNode;
-	protected String dataExchangeApiUrl;
-	protected String dataExchangeApiKey;
-	protected String dataExchangeApiHost;
-	protected int dataExchangeApiPort;
-	protected boolean executionMode;
-	protected boolean interactiveMode;
-	protected boolean multiuserMode;
-	protected boolean stopping;
+	private String workspace;
+	private String workspaceUsr;
+	private String workspacePwd;
+	private String executableNode;
+	private String dataExchangeApiUrl;
+	private String dataExchangeApiKey;
+	private String dataExchangeApiHost;
+	private int dataExchangeApiPort;
+	private boolean executionMode;
 	
-	private Process process;
-	private Scanner scanner;
-	private BufferedWriter writer;
 	private SampleResult result;
+	private boolean stopping;
 	
 	@Override
-	public SampleResult execute(Context context, List<ActionParameter> parameters) {
-		dataExchangeApiHost = "localhost";//context.getVariableManager().getValue("NL-ControllerIp");
-		dataExchangeApiPort = 7400;
-		executionMode = true;
-		interactiveMode = true;
-		multiuserMode = false;
-		stopping = false;
-		result = new SampleResult();
+	public SampleResult execute(Context context, List<ActionParameter> parameters) {	
 		
+		result = new SampleResult();
+
 		try {
-			getValuesFromParameters(parameters);
+			getValuesFromParameters(context, parameters);
 		} catch (Exception e) {
 			result.setError(true);
 			result.setStatusCode(STATUS_CODE_PARAMETER_ERROR);
 			result.setResponseContent(e.toString());
 			return result;
 		}
-
+		
+		boolean checkVuMode = context.getRuntimeMode() == RuntimeMode.CHECK_VU;
+		boolean isActionContainer = context.getCurrentVirtualUser().getCurrentStep() == "ACTIONS";
+		
+		TCShell tcshellobj = new TCShell(workspace, workspaceUsr, workspacePwd, executionMode);
+		tcshellobj.startOutputRecording();
+		
+		result.setRequestContent(tcshellobj.commandToString());
+		result.sampleStart();
+		
 		try {
-			startNewTcShellProcess(context);
-		} catch (IOException e) {
+			tcshellobj.start();
+		} catch(IOException e) {
 			result.setError(true);
 			result.setStatusCode(STATUS_CODE_PROCESS_ERROR);
 			result.setResponseContent(e.toString());
 			return result;
 		}
-		
-		result.sampleStart();
-		
+
 		try {
-			if(interactiveMode) {
-				runTcShellInteractive(); 
-			} else {
-				readScriptOutput(); // read TCShell script output
-			}
-		} catch(IOException e) {
+			tcshellobj.selectNode(executableNode);
+			tcshellobj.setConfigurationParameters(dataExchangeApiHost, dataExchangeApiPort, dataExchangeApiKey);
+			
+			// Keep running until loadtest is stopping
+			// Run only once if checking UserPath or executing outside action container
+			do {
+				tcshellobj.run();
+			} while(!stopping && !checkVuMode && isActionContainer);
+			
+			tcshellobj.exit();
+			
+		} catch (IOException e) {
 			result.setError(true);
 			result.setStatusCode(STATUS_CODE_TCSHELL_ERROR);
-			addToResponseContent(e.toString());
-			result.sampleEnd();
+			result.setResponseContent(e.toString());
 			return result;
 		}
 		
 		result.sampleEnd();
-		result.setStatusCode("OK");
-
-		if (context != null) {
-			context.getLogger().debug("TCShell execution finished with status code");
-		}
+		result.setStatusCode(STATUS_CODE_OK);
+		result.setResponseContent(tcshellobj.stopOutputRecording());
 
 		return result;
-	}
 
-	
-	@Override
-	public void stopExecute() {
-		addToResponseContent("STOPPING");
-		stopping = true;
-		//TODO: Stop running execution maybe? But exit gracefully
 	}
 	
-	protected void getValuesFromParameters(List<ActionParameter> parameters) throws Exception {
+	private void getValuesFromParameters(Context context, List<ActionParameter> parameters) throws Exception {
+		
+		dataExchangeApiHost = context.getControllerIp();
+		dataExchangeApiPort = 7400;
+		executionMode = true;
+		
 		for (ActionParameter parameter : parameters) {
 			String parameterName = parameter.getName();
-			if (parameterName.equals(TCSHELLSCRIPT_PARAMETER)) {
-				tcShellScript = parameter.getValue();
-				interactiveMode = false;
-			} else if(parameterName.equals(WORKSPACE_PARAMETER)) {
+			if(parameterName.equals(WORKSPACE_PARAMETER)) {
 				workspace = parameter.getValue();
 			} else if (parameterName.equals(WORKSPACEUSR_PARAMETER)) {
 				workspaceUsr = parameter.getValue();
-				multiuserMode = true;
 			} else if (parameterName.equals(WORKSPACEPWD_PARAMETER)) {
 				workspacePwd = parameter.getValue();
 			} else if (parameterName.equals(EXECUTABLENODE_PARAMETER)) {
@@ -143,153 +138,22 @@ public final class TCShellActionEngine implements ActionEngine {
 			}
 		}
 		
-		if(executableNode.isBlank()) {
-			throw new Exception("Required parameter " + EXECUTABLENODE_PARAMETER + " is missing");
-		}
-	}
-	
-	protected void startNewTcShellProcess(Context context) throws IOException {
-		
-		List<String> cmd = new ArrayList<>();
-		cmd.add("cmd");
-		cmd.add("/c");
-		cmd.add("tcshell");
-		cmd.add("-workspace");
-		cmd.add(wrapQuotes(workspace));
-		if(multiuserMode) {
-			cmd.add("-login");
-			cmd.add(wrapQuotes(workspaceUsr));
-			cmd.add(wrapQuotes(workspacePwd != null ? workspacePwd : ""));
-		}
-		if(executionMode) {
-			cmd.add("-executionmode");
-		}
-		if(!interactiveMode) {
-			cmd.add(wrapQuotes(tcShellScript));
+		if(StringUtils.isEmpty(workspace)) {
+			throw new Exception("Required parameter '" + WORKSPACE_PARAMETER + "' is missing");
 		}
 		
-		ProcessBuilder processBuilder = null;
-		
-		processBuilder = new ProcessBuilder(cmd);
-		process = processBuilder.start();
-		
-		if(context != null) {
-			context.getLogger().debug("TCShell execution:" + commandToString(processBuilder.command(), " "));
+		if(!workspace.toLowerCase().endsWith(".tws")) {
+			
+			 throw new Exception("Value '" + workspace + "' given for parameter '" + WORKSPACE_PARAMETER + "' is not a valid Tosca workspace. (must end with .tws)");
 		}
 
-        InputStream stdout = process.getInputStream();
-        scanner = new Scanner(stdout);
-        
-        if(interactiveMode) {
-        	scanner.useDelimiter(TCSHELL_SCANNER_DELIMITER);
-        	
-        	OutputStream stdin = process.getOutputStream();
-        	writer = new BufferedWriter(new OutputStreamWriter(stdin));
-        }
-	}
-
-	protected void runTcShellInteractive() throws IOException {
-		waitForInput();
-        
-        writeLine("jumpToNode " + executableNode);
-        
-        if(!executionMode && multiuserMode) {	        
-        	writeLine("task \"Checkout Tree\"");
-        }
-        
-        // Overwrite the tcparams if set
-        if(dataExchangeApiUrl != null) {
-        	writeLine("settcparam UseNeoLoadDataExchangeApi True");
-	        writeLine("settcparam NeoLoadDataExchangeApiHost " + dataExchangeApiHost);
-	        writeLine("settcparam NeoLoadDataExchangeApiPort " + dataExchangeApiPort);
-	        if(dataExchangeApiKey != null)
-	        	writeLine("settcparam NeoLoadDataExchangeApiKey " + dataExchangeApiKey);
-        }
-
-        //TODO: iterate via actions instead?
-        while(!stopping) {
-        	writeLine("task Run");
-        }
-
-        if(!executionMode) {
-	        writeLine("Save");
-	        
-	        if(multiuserMode) {
-	        	writeLine("CheckinAll");	
-	        }
-        }
-        
-        stopTcShellInteractive();
-	}
-	
-	protected void stopTcShellInteractive() throws IOException {
-		writeLine("exit");
-        
-        //Do you really want to exit TCShell (yes/no) ?
-        writeLine("yes");
-        
-        if(executionMode) {
-        	//Save all changes to project (yes/no) > 
-            writeLine("no");
-        }
-
-        writer.close();
-	}
-	
-	protected void readScriptOutput() {
-		while(scanner.hasNextLine()) {
-			String next = scanner.nextLine();
-			addToResponseContent(next);
+		if(StringUtils.isEmpty(executableNode) ) {
+			throw new Exception("Required parameter '" + EXECUTABLENODE_PARAMETER + "' is missing");
 		}
 	}
-
-	protected void writeLine(String text) throws IOException {
-		writeLine(text, true);
-	}
 	
-	protected void writeLine(String text, boolean waitForInput) throws IOException {
-		addToResponseContent(text);
-		
-		writer.write(text);
-        writer.newLine();
-        writer.flush();
-        
-        if(waitForInput) {
-        	waitForInput();
-        }
-	}
-	
-	protected void waitForInput() throws IOException {
-		String next = scanner.next().trim() + " > ";
-		addToResponseContent(next, false);
-	}
-	
-	protected void addToResponseContent(String line) {
-		addToResponseContent(line, true);
-	}
-	
-	protected void addToResponseContent(String line, boolean addNewLine) {
-		StringBuilder sb = new StringBuilder();
-		String responseContent = result.getResponseContent();
-		sb.append(responseContent);	
-		sb.append(line);
-		if(addNewLine) {
-			sb.append("\r\n");
-		}
-
-		result.setResponseContent(sb.toString());
-	}
-	
-	public static String wrapQuotes(String text) {
-		return "\"" + text + "\"";
-	}
-	
-	private static String commandToString(List<String> command, String separator) {
-		StringBuilder commandString = new StringBuilder();
-		for (String element : command) {
-			commandString.append(element);
-			commandString.append(separator);
-		}
-		return commandString.toString();
+	@Override
+	public void stopExecute() {
+		stopping = true;
 	}
 }
