@@ -54,17 +54,17 @@ public class TCShell {
         
         writeLine("jumpToNode " + node);
         
-        if(!executionMode && multiuserMode) {	        
-        	writeLine("task \"Checkout Tree\"");
-        }
+		if(!executionMode && multiuserMode) {	        
+			writeLine("task \"Checkout Tree\"");
+		}
 	}
 	
 	public void setConfigurationParameters(String dataExchangeApiHost, int dataExchangeApiPort, String dataExchangeApiKey) throws IOException {
 		writeLine("settcparam " + TCSHELL_TCPARAM_ENABLEINTEGRATION + " True");
-        writeLine("settcparam " + TCSHELL_TCPARAM_APIHOST + " " + dataExchangeApiHost);
-        writeLine("settcparam " + TCSHELL_TCPARAM_APIPORT + " " + dataExchangeApiPort);
-        if(dataExchangeApiKey != null)
-        	writeLine("settcparam " + TCSHELL_TCPARAM_APIKEY + " " + dataExchangeApiKey);
+		writeLine("settcparam " + TCSHELL_TCPARAM_APIHOST + " " + dataExchangeApiHost);
+		writeLine("settcparam " + TCSHELL_TCPARAM_APIPORT + " " + dataExchangeApiPort);
+		if(dataExchangeApiKey != null)
+			writeLine("settcparam " + TCSHELL_TCPARAM_APIKEY + " " + dataExchangeApiKey);
 	}
 	
 	public void run() throws IOException {
@@ -73,12 +73,12 @@ public class TCShell {
 	
 	public void exit() throws IOException {
 		if(!executionMode) {
-	        writeLine("Save");
-	        
-	        if(multiuserMode) {
-	        	writeLine("CheckinAll");	
-	        }
-        }
+			writeLine("Save");
+			
+			if(multiuserMode) {
+				writeLine("CheckinAll");	
+			}
+		}
 		
 		writeLine("exit");
         
@@ -87,7 +87,7 @@ public class TCShell {
         
         if(executionMode) {
         	//Save all changes to project (yes/no) > 
-            writeLine("no");
+    		writeLine("no");
         }
 
         writer.close();
@@ -135,14 +135,14 @@ public class TCShell {
 		
 		processBuilder = new ProcessBuilder(cmd);
 		process = processBuilder.start();
-
-        InputStream stdout = process.getInputStream();
-        OutputStream stdin = process.getOutputStream();
-        
-        scanner = new Scanner(stdout);
-        scanner.useDelimiter(TCSHELL_SCANNER_DELIMITER);
-
-    	writer = new BufferedWriter(new OutputStreamWriter(stdin));
+		
+		InputStream stdout = process.getInputStream();
+		OutputStream stdin = process.getOutputStream();
+		
+		scanner = new Scanner(stdout);
+		scanner.useDelimiter(TCSHELL_SCANNER_DELIMITER);
+		
+		writer = new BufferedWriter(new OutputStreamWriter(stdin));
 	}
 
 
@@ -157,12 +157,12 @@ public class TCShell {
 		}
 		
 		writer.write(text);
-        writer.newLine();
-        writer.flush();
-        
-        if(waitForInput) {
-        	waitForInput();
-        }
+		writer.newLine();
+		writer.flush();
+		
+		if(waitForInput) {
+			waitForInput();
+		}
 	}
 	
 	private void waitForInput() throws IOException {

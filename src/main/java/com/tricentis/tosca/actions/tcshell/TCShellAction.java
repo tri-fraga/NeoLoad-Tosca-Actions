@@ -28,10 +28,10 @@ public final class TCShellAction implements Action{
 	@Override
 	public List<ActionParameter> getDefaultActionParameters() {
 		final List<ActionParameter> parameters = new ArrayList<ActionParameter>();
-	    parameters.add(new ActionParameter(TCShellActionEngine.WORKSPACE_PARAMETER, "C:\\Tosca_Projects\\Tosca_Workspaces\\PathToYour\\Workspace.tws"));
-	    parameters.add(new ActionParameter(TCShellActionEngine.WORKSPACEUSR_PARAMETER, "Admin"));
-	    parameters.add(new ActionParameter(TCShellActionEngine.WORKSPACEPWD_PARAMETER, ""));
-	    parameters.add(new ActionParameter(TCShellActionEngine.EXECUTABLENODE_PARAMETER, "/Execution/ExecutionLists/Automated/ExecutionList"));
+		parameters.add(new ActionParameter(TCShellActionEngine.WORKSPACE_PARAMETER, "C:\\Tosca_Projects\\Tosca_Workspaces\\PathToYour\\Workspace.tws"));
+		parameters.add(new ActionParameter(TCShellActionEngine.WORKSPACEUSR_PARAMETER, "Admin"));
+		parameters.add(new ActionParameter(TCShellActionEngine.WORKSPACEPWD_PARAMETER, ""));
+		parameters.add(new ActionParameter(TCShellActionEngine.EXECUTABLENODE_PARAMETER, "/Execution/ExecutionLists/Automated/ExecutionList"));
 		return parameters;
 	}
 
