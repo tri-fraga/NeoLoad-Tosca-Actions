@@ -42,17 +42,16 @@ public class TCShell {
 		this.workspaceUsr = workspaceUsr;
 		this.workspacePwd = workspacePwd;
 		this.executionMode = executionMode;
-		this.multiuserMode = StringUtils.isEmpty(workspaceUsr);
+		this.multiuserMode = !StringUtils.isEmpty(workspaceUsr);
 	}
 
 	public void start() throws IOException {
 		startNewProcess();
+		waitForInput();
 	}
 	
 	public void selectNode(String node) throws IOException {		
-		waitForInput();
-        
-        writeLine("jumpToNode " + node);
+        writeLine("jumpToNode " + doubleQuote(node));
         
 		if(!executionMode && multiuserMode) {	        
 			writeLine("task \"Checkout Tree\"");
@@ -79,18 +78,18 @@ public class TCShell {
 				writeLine("CheckinAll");	
 			}
 		}
-		
-		writeLine("exit");
-        
-        //Do you really want to exit TCShell (yes/no) ?
-        writeLine("yes");
-        
-        if(executionMode) {
-        	//Save all changes to project (yes/no) > 
-    		writeLine("no");
-        }
 
-        writer.close();
+		writeLine("exit");
+		
+		//Do you really want to exit TCShell (yes/no) ?
+		writeLine("yes");
+		
+		if(executionMode) {
+			//Save all changes to project (yes/no) > 
+			writeLine("no");
+		}
+		
+		writer.close();
 	}
 
 	public String commandToString() {
@@ -151,6 +150,7 @@ public class TCShell {
 	}
 	
 	private void writeLine(String text, boolean waitForInput) throws IOException {
+		
 		if(outputRecording) {
 			output.append(text);
 			output.append("\r\n");

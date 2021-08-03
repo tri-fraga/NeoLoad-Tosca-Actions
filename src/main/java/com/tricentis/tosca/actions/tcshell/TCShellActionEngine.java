@@ -79,7 +79,7 @@ public final class TCShellActionEngine implements ActionEngine {
 		} catch(IOException e) {
 			result.setError(true);
 			result.setStatusCode(STATUS_CODE_PROCESS_ERROR);
-			result.setResponseContent(e.toString());
+			result.setResponseContent(tcshellobj.stopOutputRecording() + "\n" + e.toString());
 			return result;
 		}
 
@@ -98,7 +98,7 @@ public final class TCShellActionEngine implements ActionEngine {
 		} catch (IOException e) {
 			result.setError(true);
 			result.setStatusCode(STATUS_CODE_TCSHELL_ERROR);
-			result.setResponseContent(e.toString());
+			result.setResponseContent(tcshellobj.stopOutputRecording() + "\n" + e.toString());
 			return result;
 		}
 		
