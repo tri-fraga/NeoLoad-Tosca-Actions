@@ -30,7 +30,7 @@ public final class TCShellAction implements Action{
 		final List<ActionParameter> parameters = new ArrayList<ActionParameter>();
 		parameters.add(new ActionParameter(TCShellActionEngine.WORKSPACE_PARAMETER, "C:\\Tosca_Projects\\Tosca_Workspaces\\PathToYour\\Workspace.tws"));
 		parameters.add(new ActionParameter(TCShellActionEngine.WORKSPACEUSR_PARAMETER, "Admin"));
-		parameters.add(new ActionParameter(TCShellActionEngine.WORKSPACEPWD_PARAMETER, ""));
+		parameters.add(new ActionParameter(TCShellActionEngine.WORKSPACEPWD_PARAMETER, "", ActionParameter.Type.PASSWORD));
 		parameters.add(new ActionParameter(TCShellActionEngine.EXECUTABLENODE_PARAMETER, "/Execution/ExecutionLists/Automated/ExecutionList"));
 		return parameters;
 	}

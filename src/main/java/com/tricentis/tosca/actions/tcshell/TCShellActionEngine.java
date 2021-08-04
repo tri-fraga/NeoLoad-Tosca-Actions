@@ -1,17 +1,7 @@
 package com.tricentis.tosca.actions.tcshell;
 
-import java.io.BufferedWriter;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.io.OutputStreamWriter;
-import java.net.MalformedURLException;
-import java.nio.file.Files;
-import java.nio.file.Paths;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Scanner;
-import java.util.regex.Pattern;
 
 import org.apache.commons.lang3.StringUtils;
 
@@ -23,7 +13,6 @@ import com.neotys.extensions.action.engine.SampleResult;
 
 public final class TCShellActionEngine implements ActionEngine {
 	
-	public static final String COMMAND = "TCShell";
 	public static final String WORKSPACE_PARAMETER = "workspacePath";
 	public static final String WORKSPACEUSR_PARAMETER = "workspaceUser";
 	public static final String WORKSPACEPWD_PARAMETER = "workspacePassword";
@@ -31,7 +20,6 @@ public final class TCShellActionEngine implements ActionEngine {
 	public static final String EXECUTABLENODE_PARAMETER = "executableNode";
 	public static final String DATAEXCHANGEAPIURL_PARAMETER = "dataExchangeAPIURL";
 	public static final String DATAEXCHANGEAPIKEY_PARAMETER = "dataExchangeAPIKey";
-	public static final String TCSHELL_SCANNER_DELIMITER = ">|\\?";  // ' > ' or ' ? '
 	
 	private static final String STATUS_CODE_PARAMETER_ERROR = "NL-TCSHELL-TEST-ACTION-01";
 	private static final String STATUS_CODE_PROCESS_ERROR = "NL-TCSHELL-TEST-ACTION-02";
@@ -85,7 +73,7 @@ public final class TCShellActionEngine implements ActionEngine {
 
 		try {
 			tcshellobj.selectNode(executableNode);
-			tcshellobj.setConfigurationParameters(dataExchangeApiHost, dataExchangeApiPort, dataExchangeApiKey);
+			tcshellobj.enableEux(dataExchangeApiHost, dataExchangeApiPort, dataExchangeApiKey);
 			
 			// Keep running until loadtest is stopping
 			// Run only once if checking UserPath or executing outside action container
@@ -146,7 +134,7 @@ public final class TCShellActionEngine implements ActionEngine {
 			
 			 throw new Exception("Value '" + workspace + "' given for parameter '" + WORKSPACE_PARAMETER + "' is not a valid Tosca workspace. (must end with .tws)");
 		}
-
+		
 		if(StringUtils.isEmpty(executableNode) ) {
 			throw new Exception("Required parameter '" + EXECUTABLENODE_PARAMETER + "' is missing");
 		}

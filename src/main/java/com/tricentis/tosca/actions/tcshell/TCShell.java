@@ -11,9 +11,6 @@ import java.util.Scanner;
 
 import org.apache.commons.lang3.StringUtils;
 
-import com.neotys.extensions.action.engine.SampleResult;
-
-
 public class TCShell {
 	
 	public static final String TCSHELL_TCPARAM_ENABLEINTEGRATION = "SendEndUserExperienceToNeoLoad";
@@ -58,12 +55,16 @@ public class TCShell {
 		}
 	}
 	
-	public void setConfigurationParameters(String dataExchangeApiHost, int dataExchangeApiPort, String dataExchangeApiKey) throws IOException {
+	public void enableEux(String dataExchangeApiHost, int dataExchangeApiPort, String dataExchangeApiKey) throws IOException {
 		writeLine("settcparam " + TCSHELL_TCPARAM_ENABLEINTEGRATION + " True");
 		writeLine("settcparam " + TCSHELL_TCPARAM_APIHOST + " " + dataExchangeApiHost);
 		writeLine("settcparam " + TCSHELL_TCPARAM_APIPORT + " " + dataExchangeApiPort);
 		if(dataExchangeApiKey != null)
 			writeLine("settcparam " + TCSHELL_TCPARAM_APIKEY + " " + dataExchangeApiKey);
+	}
+	
+	public void disableEux() throws IOException {
+		writeLine("settcparam " + TCSHELL_TCPARAM_ENABLEINTEGRATION + " False");
 	}
 	
 	public void run() throws IOException {
@@ -72,6 +73,8 @@ public class TCShell {
 	
 	public void exit() throws IOException {
 		if(!executionMode) {
+			disableEux();
+			
 			writeLine("Save");
 			
 			if(multiuserMode) {
@@ -126,30 +129,27 @@ public class TCShell {
 		return cmd;
 	}
 	
-
 	private void startNewProcess() throws IOException {
-
-		ProcessBuilder processBuilder = null;
-		List<String> cmd = getCommand(false);
-		
-		processBuilder = new ProcessBuilder(cmd);
+		ProcessBuilder processBuilder = new ProcessBuilder(getCommand(false));
 		process = processBuilder.start();
 		
-		InputStream stdout = process.getInputStream();
 		OutputStream stdin = process.getOutputStream();
-		
-		scanner = new Scanner(stdout);
-		scanner.useDelimiter(TCSHELL_SCANNER_DELIMITER);
+		InputStream stdout = process.getInputStream();
 		
 		writer = new BufferedWriter(new OutputStreamWriter(stdin));
+		scanner = new Scanner(stdout);
+		scanner.useDelimiter(TCSHELL_SCANNER_DELIMITER);
 	}
-
 
 	private void writeLine(String text) throws IOException {
 		writeLine(text, true);
 	}
 	
 	private void writeLine(String text, boolean waitForInput) throws IOException {
+		
+		if(!process.isAlive()) {
+			throw new IOException("The TCShell was closed. Please make sure all given parameters are correct.");
+		}
 		
 		if(outputRecording) {
 			output.append(text);
@@ -168,7 +168,7 @@ public class TCShell {
 	private void waitForInput() throws IOException {
 		String text = scanner.next().trim();
 		
-		if(outputRecording) {
+		if(outputRecording && !StringUtils.isEmpty(text)) {
 			output.append(text);
 			output.append(" > ");
 		}
